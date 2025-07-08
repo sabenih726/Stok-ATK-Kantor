@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Package, Download, Plus, Minus, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,6 +46,25 @@ interface Transaction {
   timestamp: number
 }
 
+// Tambahkan fungsi untuk menyimpan dan memuat data dari localStorage
+// Tambahkan setelah interface definitions dan sebelum initialItems
+
+// Fungsi untuk menyimpan data ke localStorage
+const saveToLocalStorage = (key: string, data: any) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify(data))
+  }
+}
+
+// Fungsi untuk memuat data dari localStorage
+const loadFromLocalStorage = (key: string, defaultValue: any) => {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : defaultValue
+  }
+  return defaultValue
+}
+
 const initialItems: Item[] = [
   { id: "1", materialId: "PEN-001", name: "Pensil 2B", brand: "Faber Castell", stock: 50, category: "Alat Tulis" },
   { id: "2", materialId: "PEN-002", name: "Pensil 2B", brand: "Staedtler", stock: 30, category: "Alat Tulis" },
@@ -60,8 +79,11 @@ const initialItems: Item[] = [
 ]
 
 export default function InventoryApp() {
-  const [items, setItems] = useState<Item[]>(initialItems)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  // Ubah useState untuk items dan transactions agar menggunakan localStorage
+  const [items, setItems] = useState<Item[]>(() => loadFromLocalStorage("inventory-items", initialItems))
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    loadFromLocalStorage("inventory-transactions", []),
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedItem, setSelectedItem] = useState("")
   const [quantity, setQuantity] = useState("")
@@ -78,6 +100,16 @@ export default function InventoryApp() {
     category: "",
     initialStock: "",
   })
+
+  // Tambahkan useEffect untuk menyimpan items ke localStorage setiap kali berubah
+  useEffect(() => {
+    saveToLocalStorage("inventory-items", items)
+  }, [items])
+
+  // Tambahkan useEffect untuk menyimpan transactions ke localStorage setiap kali berubah
+  useEffect(() => {
+    saveToLocalStorage("inventory-transactions", transactions)
+  }, [transactions])
 
   // Filter items for autocomplete
   const filteredItems = items.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
