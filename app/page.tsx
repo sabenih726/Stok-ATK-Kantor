@@ -3,11 +3,30 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Search, Package, Download, Plus, Minus } from "lucide-react"
+import { Search, Package, Download, Plus, Minus, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Item {
   id: string
@@ -49,6 +68,10 @@ export default function InventoryApp() {
   const [action, setAction] = useState<"masuk" | "keluar">("masuk")
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [deletingItem, setDeletingItem] = useState<Item | null>(null)
   const [newMaterial, setNewMaterial] = useState({
     name: "",
     brand: "",
@@ -174,9 +197,39 @@ export default function InventoryApp() {
     alert(`Material baru berhasil ditambahkan dengan ID: ${materialId}`)
   }
 
+  const handleEditItem = (item: Item) => {
+    setEditingItem(item)
+    setShowEditDialog(true)
+  }
+
+  const handleUpdateItem = () => {
+    if (!editingItem) return
+
+    const updatedItems = items.map((item) => (item.id === editingItem.id ? editingItem : item))
+    setItems(updatedItems)
+    setShowEditDialog(false)
+    setEditingItem(null)
+    alert("Material berhasil diperbarui!")
+  }
+
+  const handleDeleteItem = (item: Item) => {
+    setDeletingItem(item)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDeleteItem = () => {
+    if (!deletingItem) return
+
+    const updatedItems = items.filter((item) => item.id !== deletingItem.id)
+    setItems(updatedItems)
+    setShowDeleteDialog(false)
+    setDeletingItem(null)
+    alert("Material berhasil dihapus!")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-800 flex items-center justify-center gap-2">
@@ -378,28 +431,61 @@ export default function InventoryApp() {
           </Card>
         )}
 
-        {/* Current Stock Display */}
+        {/* Current Stock Table */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>📊 Stok Saat Ini</CardTitle>
+            <CardTitle>📊 Daftar Stok Material</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map((item) => (
-                <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex justify-between items-start mb-1">
-                    <div>
-                      <div className="font-medium">
-                        {item.name} - {item.brand}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID Material</TableHead>
+                  <TableHead>Nama Barang</TableHead>
+                  <TableHead>Merk</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Stok</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm">{item.materialId}</TableCell>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.brand}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell className="text-center font-semibold">{item.stock}</TableCell>
+                    <TableCell>
+                      <Badge variant={item.stock < 10 ? "destructive" : item.stock < 20 ? "secondary" : "default"}>
+                        {item.stock < 10 ? "Stok Rendah" : item.stock < 20 ? "Stok Sedang" : "Stok Aman"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditItem(item)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteItem(item)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="text-xs text-gray-500">ID: {item.materialId}</div>
-                    </div>
-                    <Badge variant={item.stock < 10 ? "destructive" : "secondary"}>{item.stock}</Badge>
-                  </div>
-                  <div className="text-xs text-gray-400">{item.category}</div>
-                </div>
-              ))}
-            </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
 
@@ -453,6 +539,86 @@ export default function InventoryApp() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Material</DialogTitle>
+              <DialogDescription>Ubah informasi material. ID material tidak dapat diubah.</DialogDescription>
+            </DialogHeader>
+            {editingItem && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">ID Material:</label>
+                  <Input value={editingItem.materialId} disabled className="bg-gray-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nama Material:</label>
+                  <Input
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Merk:</label>
+                  <Input
+                    value={editingItem.brand}
+                    onChange={(e) => setEditingItem({ ...editingItem, brand: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Kategori:</label>
+                  <select
+                    value={editingItem.category}
+                    onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="Alat Tulis">Alat Tulis</option>
+                    <option value="Kertas">Kertas</option>
+                    <option value="Alat Kantor">Alat Kantor</option>
+                    <option value="Elektronik">Elektronik</option>
+                    <option value="Lainnya">Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Stok:</label>
+                  <Input
+                    type="number"
+                    value={editingItem.stock}
+                    onChange={(e) => setEditingItem({ ...editingItem, stock: Number.parseInt(e.target.value) || 0 })}
+                    min="0"
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleUpdateItem}>Simpan Perubahan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Material</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus material "{deletingItem?.name} - {deletingItem?.brand}"? Tindakan ini
+                tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteItem} className="bg-red-600 hover:bg-red-700">
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
